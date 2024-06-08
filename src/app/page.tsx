@@ -6,6 +6,7 @@ import profile from '../../public/profile-icon.png'
 import WeekView from './(calendars)/weekView';
 import MonthView from './(calendars)/monthView';
 import DayView from './(calendars)/dayView';
+import { getEvents,saveEvent,Event,Task} from './localStorage';
 import Create from './create';
 import { useState } from 'react';
 import { IoChevronBackOutline, IoChevronForwardOutline } from "react-icons/io5";
@@ -19,6 +20,7 @@ export default function Home() {
   const [eventName, setEventName] = useState('');
   const [startTime, setStartTime] = useState({ hour: 3, minute: 0, period: 'PM' });
   const [endTime, setEndTime] = useState({ hour: 4, minute: 0, period: 'PM' });
+  const [events, setEvents] = useState<Event[]>([]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEventName(e.target.value);
@@ -49,8 +51,12 @@ export default function Home() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // Handle form submission logic
-    console.log({ eventName, selectedDays,startTime, endTime });
+    const tasks: Task[] = []
+    const event = { eventName, selectedDays, startTime, endTime, tasks};
+    console.log(event);
+    saveEvent(event);
     createModal();
+    window.location.reload();
   };
 
   const createModal = () => setCreateVisible(!createVisible);
@@ -87,34 +93,14 @@ export default function Home() {
         ))}
       </select>
       :
-      <select
-        name="minute"
-        value={time.minute}
-        onChange={handleTimeChange}
-        className="p-2 border rounded-md text-black"
-      >
-        <option className="text-black" key={"00"} value={0}>
-            00
-          </option>
-          <option className="text-black" key={"15"} value={15}>
-            15
-          </option>
-          <option className="text-black" key={"30"} value={30}>
-            30
-          </option>
-          <option className="text-black" key={"45"} value={45}>
-            45
-          </option>
-          <option className="text-black" key={"60"} value={60}>
-            60
-          </option>
+      <select name="minute" value={time.minute} onChange={handleTimeChange} className="p-2 border rounded-md text-black">
+        <option className="text-black" key={"00"} value={0}>00</option>
+        <option className="text-black" key={"15"} value={15}>15</option>
+        <option className="text-black" key={"30"} value={30}>30</option>
+        <option className="text-black" key={"45"} value={45}>45</option>
+        <option className="text-black" key={"60"} value={60}>60</option>
       </select>
-      <select
-        name="period"
-        value={time.period}
-        onChange={handleTimeChange}
-        className="p-2 border rounded-md text-black"
-      >
+      <select name="period" value={time.period} onChange={handleTimeChange} className="p-2 border rounded-md text-black">
         <option className="text-black"value="AM">AM</option>
         <option className="text-black" value="PM">PM</option>
       </select>
@@ -124,7 +110,7 @@ export default function Home() {
   return (
     <div className="flex flex-row">
     <div className="w-full min-h-screen h-fit flex  flex-col bg-white" >
-        <div className=" h-fit max-w-screen-lg  flex flex-row items-center justify-items-center gap-4">
+        <div className=" h-[20vh] max-w-[100vw]  flex flex-row items-center justify-items-center gap-4">
           <Image className=" h-28 w-28 m-8" src={logo} alt="Logo" />
           <button className='bg-white h-12 w-36 border-2 border-black rounded-xl ' onClick={createModal}>
             <span className='  text-black text-2xl'> +  Create</span>
@@ -136,7 +122,7 @@ export default function Home() {
           </select>
           <Image className=" h-20 w-20 m-8 mr-12" src={profile} alt="Profile Icon" />
         </div>
-        <main className="h-auto w-auto bg-white px-4 flex">
+        <main className="h-[80vh] w-auto bg-white px-4 flex">
           {selectedView === 'day' && <DayView />}
           {selectedView === 'week' && <WeekView />}
           {selectedView === 'month' && <MonthView />}
@@ -149,25 +135,16 @@ export default function Home() {
           )}
         </button>
         <Create isVisible={createVisible} onClose={createModal}>
-          <h1 className=' text-gray-700 text-3xl mb-3 justify-center text-center'>Add New Event</h1>
-          <div className=' h-0.5 rounded mb-3 w-[50vw] bg-gray-700'/>
           <form className='w-[50vw] rounded-2xl h-72 bg-gray-300 p-4 shadow-md mx' onSubmit={handleSubmit}>
             <div className="flex items-center mb-4">
-              <input type="text" value={eventName} onChange={handleInputChange}
-              placeholder="Event Name" className="flex-grow p-2 text-black border rounded-md"/>
+              <input type="text" value={eventName} onChange={handleInputChange} placeholder="Event Name" className="flex-grow p-2 text-black border rounded-md"/>
               <button type="button" className="ml-2 p-2 bg-gray-400 rounded">
-                {/* Color picker placeholder */}
                 <div className="w-6 h-6 bg-green-700 rounded"></div>
               </button>
             </div>
               <div className="flex justify-between mb-4">
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                <button
-                  type="button"
-                  key={day}
-                  onClick={() => handleDayToggle(day)}
-                  className={`px-2 py-1 border rounded-md ${selectedDays.includes(day) ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}
-                >
+                <button type="button" key={day} onClick={() => handleDayToggle(day)} className={`px-2 py-1 border rounded-md ${selectedDays.includes(day) ? 'bg-blue-500 text-white' : 'bg-white text-black'}`}>
                   {day}
                 </button>
                 ))}

@@ -1,9 +1,19 @@
 'use client'
-import { useEffect,useRef } from "react";
+import { useState,useEffect,useRef } from "react";
+import {getEvents,Event} from '../localStorage'
 import { IoChevronBackOutline, IoChevronForwardOutline } from "react-icons/io5";
 
 
 export default function WeekView() {
+  const [events, setEvents] = useState<Event[]>([]);
+
+  useEffect(() => {
+    const storedEvents = getEvents();
+    setEvents(storedEvents);
+  }, []);
+
+
+
   let date = new Date();//Current selected Day as date obj
   let currentYear = date.getFullYear(); //current year (2024)
   
@@ -89,6 +99,20 @@ export default function WeekView() {
     makeHeaders();
   }
 
+  const calculateEventStyle = (event: Event) => {
+    const startHour = event.startTime.period === 'PM' && event.startTime.hour !== 12 ? event.startTime.hour + 12 : event.startTime.hour;
+    const startMinutes = startHour * 60 + event.startTime.minute;
+    const endHour = event.endTime.period === 'PM' && event.endTime.hour !== 12 ? event.endTime.hour + 12 : event.endTime.hour;
+    const endMinutes = endHour * 60 + event.endTime.minute;
+    const top = (startMinutes / 60) * 56-56; // assuming 60px per hour
+    const height = ((endMinutes - startMinutes) / 60) * 60;
+
+    return {
+      top: `${top}px`,
+      height: `${height}px`,
+    };
+  };
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -118,21 +142,85 @@ export default function WeekView() {
       </button>
       {/* Hours */}
       <div ref={scrollRef} className="grid grid-cols-8 gap-x-2 w-full h-[60vh] overflow-y-scroll col-span-8 scrollbar-none">
-      <ul className="mt-4 text-gray-300 flex flex-col justify-center items-center">
+      <ul className=" text-gray-300 flex flex-col justify-center items-center">
         {['1 AM','2 AM','3 AM','4 AM', '5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM', '5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM','12 AM'].map(time => (
-          <li key={time}className=" text-sm mt-6">
+          <li key={time} className="text-sm h-14">
             {time}
           </li>
         ))}
       </ul>
       {/* Divs for body of days */}
-      <div className="bg-gray-200"></div>
-      <div className="bg-gray-200"></div>
-      <div className="bg-gray-200"></div>
-      <div className="bg-gray-200"></div>
-      <div className="bg-gray-200"></div>
-      <div className="bg-gray-200"></div>
-      <div className="bg-gray-200"></div>
+      <div className="bg-gray-200">
+            {events
+              .filter(event => event.selectedDays.includes('Sun'))
+              .map((event, index) => (
+                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
+                  <h4>{event.eventName}</h4>
+                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                </div>
+              ))}
+      </div>
+        
+      <div className="bg-gray-200">
+          {events
+              .filter(event => event.selectedDays.includes('Mon'))
+              .map((event, index) => (
+                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
+                  <h4>{event.eventName}</h4>
+                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                </div>
+              ))}
+      </div>
+      <div className="bg-gray-200">
+      {events
+              .filter(event => event.selectedDays.includes('Tue'))
+              .map((event, index) => (
+                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
+                  <h4>{event.eventName}</h4>
+                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                </div>
+              ))}
+      </div>
+      <div className="bg-gray-200">
+      {events
+              .filter(event => event.selectedDays.includes('Wed'))
+              .map((event, index) => (
+                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
+                  <h4>{event.eventName}</h4>
+                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                </div>
+              ))}
+      </div>
+      <div className="bg-gray-200">
+      {events
+              .filter(event => event.selectedDays.includes('Thu'))
+              .map((event, index) => (
+                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
+                  <h4>{event.eventName}</h4>
+                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                </div>
+              ))}
+      </div>
+      <div className="bg-gray-200">
+      {events
+              .filter(event => event.selectedDays.includes('Fri'))
+              .map((event, index) => (
+                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
+                  <h4 className=" text-base">{event.eventName}</h4>
+                  <p  className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                </div>
+              ))}
+      </div>
+      <div className="bg-gray-200">
+      {events
+              .filter(event => event.selectedDays.includes('Sat'))
+              .map((event, index) => (
+                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
+                  <h4>{event.eventName}</h4>
+                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                </div>
+              ))}
+      </div>
       </div>
     </div>
   )

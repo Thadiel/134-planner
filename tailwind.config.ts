@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from 'tailwindcss/plugin';
 
 const config: Config = {
   content: [
@@ -16,16 +17,18 @@ const config: Config = {
     },
   },
   plugins: [
-    function ({ addUtilities }) {
-      addUtilities({
+    plugin(function({ addUtilities }) {
+      const newUtilities = {
         '.scrollbar-none': {
           'scrollbar-width': 'none',
           '&::-webkit-scrollbar': {
             display: 'none',
           },
         },
-      });
-    },
+      };
+
+      addUtilities(newUtilities);
+    }),
   ],
 };
 export default config;
