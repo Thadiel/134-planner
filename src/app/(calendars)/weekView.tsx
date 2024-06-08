@@ -1,11 +1,12 @@
 'use client'
-import { useEffect } from "react";
+import { useEffect,useRef } from "react";
 import { IoChevronBackOutline, IoChevronForwardOutline } from "react-icons/io5";
 
 
 export default function WeekView() {
   let date = new Date();//Current selected Day as date obj
   let currentYear = date.getFullYear(); //current year (2024)
+  
   let currentMonth =date.getMonth(); //current month (0-11)
   let lastDayM =new Date(currentYear,currentMonth+1,0); //Last Day of the month as date obj
   let today = new Date();  //Today
@@ -87,6 +88,15 @@ export default function WeekView() {
     lastDayM =new Date(currentYear,currentMonth+1,0);
     makeHeaders();
   }
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Set the initial scroll position
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 350; // Change this value to the desired scroll position
+    }
+  }, []);
   
   return (
     <div className="grid grid-cols-9 gap-x-2 w-full pb-10">
@@ -104,23 +114,16 @@ export default function WeekView() {
       <div id="7" className="bg-gray-200 px-4 py-2 flex flex-col text-center"></div>
       {/* Forward */}
       <button className=" text-gray-300 text-8xl " onClick={forwardClick}>
-        <IoChevronForwardOutline className="h-14 w-14" />
+        <IoChevronForwardOutline className="h-14 w-14 " />
       </button>
       {/* Hours */}
+      <div ref={scrollRef} className="grid grid-cols-8 gap-x-2 w-full h-[60vh] overflow-y-scroll col-span-8 scrollbar-none">
       <ul className="mt-4 text-gray-300 flex flex-col justify-center items-center">
-        <li className=" text-sm mt-6">8 AM</li>
-        <li className=" text-sm mt-6">9 AM</li>
-        <li className=" text-sm mt-6">10 AM</li>
-        <li className=" text-sm mt-6">11 AM</li>
-        <li className=" text-sm mt-6">12 AM</li>
-        <li className=" text-sm mt-6">1 PM</li>
-        <li className=" text-sm mt-6">2 PM</li>
-        <li className=" text-sm mt-6">3 PM</li>
-        <li className=" text-sm mt-6">4 PM</li>
-        <li className=" text-sm mt-6">5 PM</li>
-        <li className=" text-sm mt-6">6 PM</li>
-        <li className=" text-sm mt-6">7 PM</li>
-        <li className=" text-sm mt-6">8 PM</li>
+        {['1 AM','2 AM','3 AM','4 AM', '5 AM','6 AM','7 AM','8 AM','9 AM','10 AM','11 AM','12 PM','1 PM','2 PM','3 PM','4 PM', '5 PM','6 PM','7 PM','8 PM','9 PM','10 PM','11 PM','12 AM'].map(time => (
+          <li key={time}className=" text-sm mt-6">
+            {time}
+          </li>
+        ))}
       </ul>
       {/* Divs for body of days */}
       <div className="bg-gray-200"></div>
@@ -130,7 +133,7 @@ export default function WeekView() {
       <div className="bg-gray-200"></div>
       <div className="bg-gray-200"></div>
       <div className="bg-gray-200"></div>
-
+      </div>
     </div>
   )
 }
