@@ -1,27 +1,23 @@
 'use client'
 import { useState,useEffect,useRef } from "react";
-import {getEvents,Event} from '../localStorage'
+import {getEvents,Event,generateTimeSlots} from '../localStorage'
 import { IoChevronBackOutline, IoChevronForwardOutline } from "react-icons/io5";
 
 
 export default function WeekView() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [showTimeDropdown, setShowTimeDropdown] = useState<{ [key: number]: boolean }>({});
+  const [selectedEventIndex, setSelectedEventIndex] = useState<number | null>(null);
 
-  useEffect(() => {
-    const storedEvents = getEvents();
-    setEvents(storedEvents);
-  }, []);
-
-
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   let date = new Date();//Current selected Day as date obj
   let currentYear = date.getFullYear(); //current year (2024)
-  
   let currentMonth =date.getMonth(); //current month (0-11)
   let lastDayM =new Date(currentYear,currentMonth+1,0); //Last Day of the month as date obj
   let today = new Date();  //Today
   let Months =["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-  let Weekdays=["SUN","MON","TUE","WED","THU","SAT","SUN"];
+  let Weekdays=["SUN","MON","TUE","WED","THU","FRI","SAT"];
   const makeHeaders=()=>{
     //Clear All Headers Before you start
     for(let i =1;i<=7;i++){
@@ -78,11 +74,15 @@ export default function WeekView() {
 
   //Makes the headers when page is loaded
   useEffect(()=>{
+    const storedEvents = getEvents();
+    setEvents(storedEvents);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = (56*today.getHours()-56); 
+    }
     makeHeaders();
   },[]);
 
   const forwardClick=()=>{
-    console.log("forward");
     date.setDate(date.getDate()+7);
     currentYear = date.getFullYear();
     currentMonth =date.getMonth();
@@ -91,7 +91,6 @@ export default function WeekView() {
   }
 
   const backClick=()=>{
-    console.log("back");
     date.setDate(date.getDate()-7);
     currentYear = date.getFullYear();
     currentMonth =date.getMonth();
@@ -113,16 +112,43 @@ export default function WeekView() {
     };
   };
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const toggleTimeDropdown = (eventIndex: number) => {
+    setShowTimeDropdown((prevShowTimeDropdown) => ({
+      ...prevShowTimeDropdown,
+      [eventIndex]: !prevShowTimeDropdown[eventIndex],
+    }));
+    setSelectedEventIndex(eventIndex);
+  };
 
-  useEffect(() => {
-    // Set the initial scroll position
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 350; // Change this value to the desired scroll position
-    }
-  }, []);
-  
+  const handleTimeSelect = (eventIndex: number, startTime: string, endTime: string) => {
+    const [startHour, startMinute, startPeriod] = (startTime.match(/(\d+):(\d+) (\w+)/)?.slice(1) ?? []) ;
+    const [endHour, endMinute, endPeriod] = (endTime.match(/(\d+):(\d+) (\w+)/)?.slice(1)?? []);
+
+    const updatedEvents = [...events];
+    updatedEvents[eventIndex].startTime = {
+      hour: parseInt(startHour),
+      minute: parseInt(startMinute),
+      period: startPeriod as 'AM' | 'PM',
+    };
+    updatedEvents[eventIndex].endTime = {
+      hour: parseInt(endHour),
+      minute: parseInt(endMinute),
+      period: endPeriod as 'AM' | 'PM',
+    };
+
+    setEvents(updatedEvents);
+    localStorage.setItem('events', JSON.stringify(updatedEvents));
+
+    setShowTimeDropdown((prevShowTimeDropdown) => ({
+      ...prevShowTimeDropdown,
+      [eventIndex]: false,
+    }));
+  };
+
+  const timeSlots = generateTimeSlots();
+
   return (
+    
     <div className="grid grid-cols-9 gap-x-2 w-full pb-10">
       {/* Back Button */}
       <button className=" text-gray-300 text-8xl flex justify-center items-center" onClick={backClick}>
@@ -151,77 +177,211 @@ export default function WeekView() {
       </ul>
       {/* Divs for body of days */}
       <div className="bg-gray-200">
-            {events
-              .filter(event => event.selectedDays.includes('Sun'))
-              .map((event, index) => (
-                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
-                  <h4>{event.eventName}</h4>
-                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+      {events.map((event, index) => {
+              if (!event.selectedDays.includes("Sun")) {
+                return null;
+              }
+              return (
+                
+                <div key={index} className="event relative bg-red-200 mr-6 p-2 rounded-r-xl" style={calculateEventStyle(event)}>
+                  <h4 className="text-[.65rem]">{event.eventName}</h4>
+                  <p className=" text-[.5rem]" onClick={() => toggleTimeDropdown(index)}>{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                  {showTimeDropdown[index] && (
+                    <div className="time-dropdown h-40 overflow-y-auto scrollbar-none">
+                      {timeSlots.map((startTime, Timeindex) => {
+                        const endTime = timeSlots[(Timeindex + 1) % timeSlots.length];
+                        return (
+                          <div
+                            key={Timeindex}
+                            className="time-slot bg-slate-500 text-[.5em] w-full p-2"
+                            onClick={() => handleTimeSelect(index, startTime, endTime)}
+                          >
+                            {startTime} - {endTime}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              ))}
-      </div>
-        
-      <div className="bg-gray-200">
-          {events
-              .filter(event => event.selectedDays.includes('Mon'))
-              .map((event, index) => (
-                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
-                  <h4>{event.eventName}</h4>
-                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
-                </div>
-              ))}
-      </div>
-      <div className="bg-gray-200">
-      {events
-              .filter(event => event.selectedDays.includes('Tue'))
-              .map((event, index) => (
-                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
-                  <h4>{event.eventName}</h4>
-                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
-                </div>
-              ))}
-      </div>
-      <div className="bg-gray-200">
-      {events
-              .filter(event => event.selectedDays.includes('Wed'))
-              .map((event, index) => (
-                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
-                  <h4>{event.eventName}</h4>
-                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
-                </div>
-              ))}
+                
+                )}
+              )}
       </div>
       <div className="bg-gray-200">
-      {events
-              .filter(event => event.selectedDays.includes('Thu'))
-              .map((event, index) => (
-                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
-                  <h4>{event.eventName}</h4>
-                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+          {events.map((event, index) => {
+              if (!event.selectedDays.includes("Mon")) {
+                return null;
+              }
+              return (
+                <div key={index} className="event relative bg-red-200 mr-6 p-2 rounded-r-xl" style={calculateEventStyle(event)}>
+                  <h4 className="text-[.65rem]">{event.eventName}</h4>
+                  <p className=" text-[.5rem]" onClick={() => toggleTimeDropdown(index)}>{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                  {showTimeDropdown[index] && (
+                    <div className="time-dropdown h-40 overflow-y-auto scrollbar-none">
+                      {timeSlots.map((startTime, Timeindex) => {
+                        const endTime = timeSlots[(Timeindex + 1) % timeSlots.length];
+                        return (
+                          <div
+                            key={Timeindex}
+                            className="time-slot bg-slate-500 text-[.5em] w-full p-2"
+                            onClick={() => handleTimeSelect(index, startTime, endTime)}
+                          >
+                            {startTime} - {endTime}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              ))}
+                )}
+              )}
       </div>
       <div className="bg-gray-200">
-      {events
-              .filter(event => event.selectedDays.includes('Fri'))
-              .map((event, index) => (
-                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
-                  <h4 className=" text-base">{event.eventName}</h4>
-                  <p  className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+      {events.map((event, index) => {
+              if (!event.selectedDays.includes("Tue")) {
+                return null;
+              }
+              return (
+                <div key={index} className="event relative bg-red-200 mr-6 p-2 rounded-r-xl" style={calculateEventStyle(event)}>
+                  <h4 className="text-[.65rem]">{event.eventName}</h4>
+                  <p className=" text-[.5rem]" onClick={() => toggleTimeDropdown(index)}>{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                  {showTimeDropdown[index] && (
+                    <div className="time-dropdown h-40 overflow-y-auto scrollbar-none">
+                      {timeSlots.map((startTime, Timeindex) => {
+                        const endTime = timeSlots[(Timeindex + 1) % timeSlots.length];
+                        return (
+                          <div
+                            key={Timeindex}
+                            className="time-slot bg-slate-500 text-[.5em] w-full p-2"
+                            onClick={() => handleTimeSelect(index, startTime, endTime)}
+                          >
+                            {startTime} - {endTime}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              ))}
+                )}
+              )}
       </div>
       <div className="bg-gray-200">
-      {events
-              .filter(event => event.selectedDays.includes('Sat'))
-              .map((event, index) => (
-                <div key={index} className="event relative bg-red-200" style={calculateEventStyle(event)}>
-                  <h4>{event.eventName}</h4>
-                  <p className=" text-xs">{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+      {events.map((event, index) => {
+              if (!event.selectedDays.includes("Wed")) {
+                return null;
+              }
+              return (
+                <div key={index} className="event relative bg-red-200 mr-6 p-2 rounded-r-xl" style={calculateEventStyle(event)}>
+                  <h4 className="text-[.65rem]">{event.eventName}</h4>
+                  <p className=" text-[.5rem]" onClick={() => toggleTimeDropdown(index)}>{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                  {showTimeDropdown[index] && (
+                    <div className="time-dropdown h-40 overflow-y-auto scrollbar-none">
+                      {timeSlots.map((startTime, Timeindex) => {
+                        const endTime = timeSlots[(Timeindex + 1) % timeSlots.length];
+                        return (
+                          <div
+                            key={Timeindex}
+                            className="time-slot bg-slate-500 text-[.5em] w-full p-2"
+                            onClick={() => handleTimeSelect(index, startTime, endTime)}
+                          >
+                            {startTime} - {endTime}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              ))}
+                )}
+              )}
       </div>
+      <div className="bg-gray-200">
+      {events.map((event, index) => {
+              if (!event.selectedDays.includes("Thu")) {
+                return null;
+              }
+              return (
+                <div key={index} className="event relative bg-red-200 mr-6 p-2 rounded-r-xl" style={calculateEventStyle(event)}>
+                  <h4 className="text-[.65rem]">{event.eventName}</h4>
+                  <p className=" text-[.5rem]" onClick={() => toggleTimeDropdown(index)}>{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                  {showTimeDropdown[index] && (
+                    <div className="time-dropdown h-40 overflow-y-auto scrollbar-none">
+                      {timeSlots.map((startTime, Timeindex) => {
+                        const endTime = timeSlots[(Timeindex + 1) % timeSlots.length];
+                        return (
+                          <div
+                            key={Timeindex}
+                            className="time-slot bg-slate-500 text-[.5em] w-full p-2"
+                            onClick={() => handleTimeSelect(index, startTime, endTime)}
+                          >
+                            {startTime} - {endTime}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                )}
+              )}
       </div>
+      <div className="bg-gray-200">
+      {events.map((event, index) => {
+              if (!event.selectedDays.includes("Fri")) {
+                return null;
+              }
+              return (
+                <div key={index} className="event relative bg-red-200 mr-6 p-2 rounded-r-xl" style={calculateEventStyle(event)}>
+                  <h4 className="text-[.65rem]">{event.eventName}</h4>
+                  <p className=" text-[.5rem]" onClick={() => toggleTimeDropdown(index)}>{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                  {showTimeDropdown[index] && (
+                    <div className="time-dropdown h-40 overflow-y-auto scrollbar-none">
+                      {timeSlots.map((startTime, Timeindex) => {
+                        const endTime = timeSlots[(Timeindex + 1) % timeSlots.length];
+                        return (
+                          <div
+                            key={Timeindex}
+                            className="time-slot bg-slate-500 text-[.5em] w-full p-2"
+                            onClick={() => handleTimeSelect(index, startTime, endTime)}
+                          >
+                            {startTime} - {endTime}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                )}
+              )}
+      </div>
+      <div className="bg-gray-200">
+      {events.map((event, index) => {
+              if (!event.selectedDays.includes("Sat")) {
+                return null;
+              }
+              return (
+                <div key={index} className="event relative bg-red-200 mr-6 p-2 rounded-r-xl" style={calculateEventStyle(event)}>
+                  <h4 className="text-[.65rem]">{event.eventName}</h4>
+                  <p className=" text-[.5rem]" onClick={() => toggleTimeDropdown(index)}>{`${event.startTime.hour}:${String(event.startTime.minute).padStart(2, '0')} ${event.startTime.period} - ${event.endTime.hour}:${String(event.endTime.minute).padStart(2, '0')} ${event.endTime.period}`}</p>
+                  {showTimeDropdown[index] && (
+                    <div className="time-dropdown h-40 overflow-y-auto scrollbar-none">
+                      {timeSlots.map((startTime, Timeindex) => {
+                        const endTime = timeSlots[(Timeindex + 1) % timeSlots.length];
+                        return (
+                          <div
+                            key={Timeindex}
+                            className="time-slot bg-slate-500 text-[.5em] w-full p-2"
+                            onClick={() => handleTimeSelect(index, startTime, endTime)}
+                          >
+                            {startTime} - {endTime}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                )}
+              )}
+      </div>
+    </div>
     </div>
   )
 }
